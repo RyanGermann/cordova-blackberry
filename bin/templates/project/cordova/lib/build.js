@@ -16,13 +16,15 @@
  * limitations under the License.
  */
 
-var path = require("path"),
+var params,
+    args,
+    path = require("path"),
+    getParams = require("./params");
     exit = require("exit"),
     command = require("commander"),
     os = require("os"),
     utils = require("./utils"),
     signingHelper = require("./signing-helper"),
-    bbProperties = utils.getProperties(),
     bbwpArgv = [
         process.argv[0],
         path.resolve(path.join(__dirname, process.argv[1])),
@@ -34,8 +36,7 @@ var path = require("path"),
     childProcess = require("child_process"),
     pkgrUtils = require("./packager-utils"),
     session = require("./session"),
-    ERROR_VALUE = 2,
-    commandStr;
+    ERROR_VALUE = 2;
 
 function copyArgIfExists(arg) {
     if (command[arg]) {
@@ -57,7 +58,17 @@ command
     .option('--no-signing', 'when building in release mode, this will skip signing');
 
 try {
-    command.parse(process.argv);
+    args = process.argv;
+    params = getParams("build");
+    Object.getOwnPropertyNames(params).forEach(function (p) {
+        args.push(p);
+
+        if (params[p]) {
+            args.push(params[p]);
+        }
+    });
+
+    command.parse(args);
 
     if (command.debug && command.release) {
         console.error("Invalid build command: cannot specify both debug and release parameters.");
