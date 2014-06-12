@@ -17,6 +17,7 @@
 var fs = require("fs"),
     path = require("path"),
     utils = require("./utils"),
+    net = require("net"),
     targetUtils = require("./target-utils.js"),
     localize = require("./localize"),
     pkgrUtils = require("./packager-utils"),
@@ -115,6 +116,34 @@ function validateTarget(options, targetName, allDone) {
                 }
             }
         }
+
+        runTasks.push(function (done) {
+            if (err !== undefined)
+                done(err);
+            var timeout = 20000;
+            var callbackCalled = false;
+            var doCallback = function(result) {
+                if (callbackCalled) return;
+                callbackCalled = true;
+                if (result) {
+                    err = result;
+                }
+
+                done(err);
+            };
+
+            setTimeout(function() {
+                doCallback("Could not reach target "+deployTarget.name + ": "+deployTarget.ip);
+            }, timeout);
+
+            var client = net.createConnection(443, deployTarget.ip, function(e) {
+                client.destroy();
+                doCallback("", e);
+            }).on("error", function(e) {
+                doCallback(e + " for target " + deployTarget.name + ": "+deployTarget.ip);
+            });
+
+        });
 
         if (!deployTarget.pin) {
             runTasks.push(function (done) {
